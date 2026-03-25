@@ -1,133 +1,140 @@
-# Spotify JSON API + PostgreSQL
+# Spotify Data Pipeline
 
-Prosta aplikacja Node.js, która:
+Backendowa aplikacja do automatycznego zbierania, przetwarzania i wizualizacji historii słuchania z Spotify.
 
-- autoryzuje użytkownika przez Spotify OAuth,
-- pobiera ostatnio odtwarzane utwory,
-- dociąga parametry audio utworów,
-- zapisuje wszystko w PostgreSQL,
-- wystawia wynik jako JSON API.
+Projekt stanowi rozwinięcie wcześniejszego podejścia opartego na statycznych plikach JSON (Spotify Data Access Request). Zamiast analizować zamknięty zbiór danych, system działa w trybie **ciągłym** — automatycznie pobiera dane z API i buduje własne archiwum w bazie danych.
 
-## Wymagania
+---
 
-- Node.js 20+
-- PostgreSQL 14+
-- konto deweloperskie Spotify: https://developer.spotify.com/dashboard
+## CEL
 
-## Konfiguracja Spotify
+Celem projektu było stworzenie **w pełni zautomatyzowanego pipeline’u danych**, który:
 
-1. Utwórz aplikację w Spotify Developer Dashboard.
-2. Skopiuj `Client ID` i `Client Secret`.
-3. W ustawieniach aplikacji dodaj redirect URI:
+- eliminuje ręczne przetwarzanie plików JSON  
+- zapewnia **ciągłą aktualizację danych**  
+- rozszerza dane Spotify o dodatkowe metadane (niedostępne w standardowym eksporcie)  
+- umożliwia łatwą analizę i wizualizację historii słuchania  
 
-```text
-http://127.0.0.1:3000/auth/callback
-```
+---
 
-## Instalacja
+## ARCHITEKTURA
+Spotify Web API
+↓
+Data Fetching & Processing
+↓
+PostgreSQL (JSONB)
+↓
+REST API
+↓
+Dashboard (Chart.js)
 
-```bash
-cd C:\Users\Dom\spotify-json-app
-copy .env.example .env
-npm install
-```
+---
 
-Następnie uzupełnij `.env` swoimi danymi:
+## Kluczowe funkcjonalności
 
-```env
-PORT=3000
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/spotify_app
-SPOTIFY_CLIENT_ID=twoj_client_id
-SPOTIFY_CLIENT_SECRET=twoj_client_secret
-SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000/auth/callback
-```
+### Integracja z Spotify API
+- Autoryzacja użytkownika (OAuth 2.0)
+- Automatyczne odświeżanie tokenów (refresh tokens)
+- Pobieranie:
+  - historii odtworzeń
+  - metadanych utworów i artystów
 
-## Baza danych
+---
 
-Utwórz bazę:
+###  Automatyczny pipeline danych
+- pełna automatyzacja przepływu danych
+- transformacja surowego JSON → struktura relacyjna
+- zapis do bazy w czasie rzeczywistym
 
-```sql
-CREATE DATABASE spotify_app;
-```
+---
 
-Tabele utworzą się automatycznie przy starcie aplikacji na podstawie `db/schema.sql`.
+###  Auto-sync
+- synchronizacja co **5 minut**
+- brak potrzeby ręcznego uruchamiania
+- system działa niezależnie od frontendu
 
-## Uruchomienie
+---
 
-```bash
-npm run dev
-```
+###  Przechowywanie danych (PostgreSQL, JSONB)
+- trwałe przechowywanie historii odsłuchów
+- wykorzystanie **JSONB** do:
+  - zachowania pełnego payloadu API
+  - elastycznej analizy danych
+- indeksowane kolumny dla wydajnych zapytań
 
-## Jak używać
+---
 
-1. Otwórz:
+###  REST API
+Aplikacja udostępnia własne endpointy, które zwracają:
 
-```text
-GET http://127.0.0.1:3000/auth/login
-```
+- statystyki słuchania
+- historię odtworzeń
+- dane artystów (obrazy, gatunki, popularność)
 
-2. Skopiuj `authorizationUrl` z odpowiedzi JSON i otwórz go w przeglądarce.
-3. Zaloguj się do Spotify i zatwierdź dostęp.
-4. Spotify przekieruje Cię na:
+---
 
-```text
-http://127.0.0.1:3000/auth/callback?code=...
-```
+### Dashboard
+Wizualizacja danych w przeglądarce przy użyciu **Chart.js**:
 
-5. Po autoryzacji wywołaj synchronizację:
+- top artyści i gatunki  
+- aktywność słuchania (godziny / dni tygodnia)  
+- lista ostatnio odtwarzanych utworów  
 
-```bash
-curl -X POST http://127.0.0.1:3000/sync/recently-played ^
-  -H "Content-Type: application/json" ^
-  -d "{\"limit\":20}"
-```
+---
 
-6. Pobierz zapisane dane:
+## Schemat bazy danych
 
-```text
-GET http://127.0.0.1:3000/tracks/recent?limit=20
-```
+### `spotify_recent_tracks` (historia odtworzeń)
 
-## Przykładowa odpowiedź JSON
+| Kolumna | Opis |
+|--------|------|
+| played_at | Data i godzina odtworzenia (PK) |
+| spotify_track_id | ID utworu |
+| track_name | Nazwa utworu |
+| album_name | Nazwa albumu |
+| artist_names | Lista artystów |
+| duration_ms | Długość utworu |
+| popularity | Popularność (0–100) |
+| explicit | Czy zawiera treści explicit |
+| track_number | Numer utworu |
+| spotify_url | Link do Spotify |
+| track_payload | Surowy JSON (JSONB) |
 
-```json
-{
-  "count": 1,
-  "items": [
-    {
-      "played_at": "2026-03-24T10:12:31.000Z",
-      "spotify_track_id": "4uLU6hMCjMI75M1A2tKUQC",
-      "track_name": "Never Gonna Give You Up",
-      "album_name": "Whenever You Need Somebody",
-      "artist_names": ["Rick Astley"],
-      "duration_ms": 213573,
-      "popularity": 78,
-      "explicit": false,
-      "track_number": 1,
-      "disc_number": 1,
-      "spotify_url": "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
-      "preview_url": null,
-      "audio_features": {
-        "danceability": 0.727,
-        "energy": 0.939,
-        "tempo": 113.339,
-        "valence": 0.937
-      }
-    }
-  ]
-}
-```
+---
 
-## Endpointy
+### `spotify_artists` (dane o artystach)
 
-- `GET /health`
-- `GET /auth/login`
-- `GET /auth/callback`
-- `POST /sync/recently-played`
-- `GET /tracks/recent`
+| Kolumna | Opis |
+|--------|------|
+| spotify_artist_id | ID artysty |
+| name | Nazwa |
+| image_url | Zdjęcie |
+| genres | Gatunki |
+| popularity | Popularność (0–100) |
 
-## Uwagi
+---
 
-- Aplikacja przechowuje tokeny i historię odsłuchu w PostgreSQL.
-- Synchronizacja zapisuje pełny payload Spotify w kolumnie `track_payload`.
-- Parametry audio trafiają do kolumny `audio_features` typu `JSONB`.
+## Szczegóły implementacyjne
+
+- **Deduplication:** unikalność rekordów na podstawie `played_at`
+- **ETL w locie:** mapowanie danych podczas pobierania
+- **Background workers:** niezależny proces synchronizacji
+- **OAuth persistence:** automatyczne odnawianie tokenów (bez re-logowania)
+
+---
+Projekt pokazuje praktyczne wykorzystanie:
+
+- projektowania pipeline’ów danych  
+- integracji z zewnętrznym API  
+- pracy z PostgreSQL i JSONB  
+- budowy backendu + API  
+- tworzenia systemów działających w tle  
+
+---
+
+## Pomysły:
+
+- analiza rekomendacji (ML / clustering)
+- eksport danych do CSV / Parquet  
+- system alertów (np. nowe top tracks)  
+- deployment (Docker + CI/CD)  
