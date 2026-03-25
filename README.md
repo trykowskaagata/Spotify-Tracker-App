@@ -5,6 +5,7 @@ Backendowa aplikacja do automatycznego zbierania, przetwarzania i wizualizacji h
 Projekt stanowi rozwinięcie wcześniejszego podejścia opartego na statycznych plikach JSON (Spotify Data Access Request). Zamiast analizować zamknięty zbiór danych, system działa w trybie **ciągłym** — automatycznie pobiera dane z API i buduje własne archiwum w bazie danych.
 
 ---
+<img width="546" height="725" alt="spotiwynik" src="https://github.com/user-attachments/assets/f73f2903-ec13-4a97-9174-f79248de5f3f" />
 
 ## CEL
 
@@ -18,67 +19,25 @@ Celem projektu było stworzenie **w pełni zautomatyzowanego pipeline’u danych
 ---
 
 ## ARCHITEKTURA
-Spotify Web API
-↓
-Data Fetching & Processing
-↓
-PostgreSQL (JSONB)
-↓
-REST API
-↓
-Dashboard (Chart.js)
+System działa w modelu ciągłym (Background Worker):
+1. **Pobieranie:** Skrypt co 5 minut odpytuje endpoint `currently-playing` oraz `recently-played`.
+2. **Przetwarzanie:** Transformacja surowego JSON do ustandaryzowanej struktury relacyjnej.
+3. **Składowanie:** Zapis do bazy PostgreSQL (Deduplikacja na podstawie timestampu `played_at`).
+4. **Prezentacja:** Frontend pobiera zagregowane dane przez REST API i wyświetla je na dashboardzie.
 
 ---
 
-## Kluczowe funkcjonalności
+## Funkcje Dashboardu
 
-### Integracja z Spotify API
-- Autoryzacja użytkownika (OAuth 2.0)
-- Automatyczne odświeżanie tokenów (refresh tokens)
-- Pobieranie:
-  - historii odtworzeń
-  - metadanych utworów i artystów
+Strona została podzielona na kluczowe sekcje analityczne:
 
----
+*   **Sekcja Centralna:** Wyświetla zdjęcie profilowe (`image_url`) oraz nazwę aktualnie najczęściej słuchanego artysty.
+*   **Kafelki Top 5:** Trzy równoległe zestawienia generowane na podstawie zapytań SQL:
+    *   **Top 5 Utworów** (Ranking według liczby wystąpień w historii).
+    *   **Top 5 Artystów** (Ranking na podstawie częstotliwości odtworzeń).
+    *   **Top 5 Gatunków** (Agregacja danych z tabeli artystów).
+*   **Ostatnio słuchani:** Lista ostatnich sesji z informacją o czasie, jaki upłynął od odtworzenia.
 
-###  Automatyczny pipeline danych
-- pełna automatyzacja przepływu danych
-- transformacja surowego JSON → struktura relacyjna
-- zapis do bazy w czasie rzeczywistym
-
----
-
-###  Auto-sync
-- synchronizacja co **5 minut**
-- brak potrzeby ręcznego uruchamiania
-- system działa niezależnie od frontendu
-
----
-
-###  Przechowywanie danych (PostgreSQL, JSONB)
-- trwałe przechowywanie historii odsłuchów
-- wykorzystanie **JSONB** do:
-  - zachowania pełnego payloadu API
-  - elastycznej analizy danych
-- indeksowane kolumny dla wydajnych zapytań
-
----
-
-###  REST API
-Aplikacja udostępnia własne endpointy, które zwracają:
-
-- statystyki słuchania
-- historię odtworzeń
-- dane artystów (obrazy, gatunki, popularność)
-
----
-
-### Dashboard
-Wizualizacja danych w przeglądarce przy użyciu **Chart.js**:
-
-- top artyści i gatunki  
-- aktywność słuchania (godziny / dni tygodnia)  
-- lista ostatnio odtwarzanych utworów  
 
 ---
 
@@ -114,12 +73,12 @@ Wizualizacja danych w przeglądarce przy użyciu **Chart.js**:
 
 ---
 
-## Szczegóły implementacyjne
+## Technologie
 
-- **Deduplication:** unikalność rekordów na podstawie `played_at`
-- **ETL w locie:** mapowanie danych podczas pobierania
-- **Background workers:** niezależny proces synchronizacji
-- **OAuth persistence:** automatyczne odnawianie tokenów (bez re-logowania)
+- **Backend:** Node.js (Express) / Python.
+- **Baza danych:** PostgreSQL.
+- **Frontend:** JavaScript (Vanilla/ES6), Chart.js (opcjonalnie do wykresów aktywności).
+- **API:** Spotify Web API (OAuth 2.0 z obsługą Refresh Tokens).
 
 ---
 ## Bezpieczeństwo i Konfiguracja
