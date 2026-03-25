@@ -1,0 +1,24 @@
+{
+  "name": "spotify-json-app",
+  "version": "1.0.0",
+  "description": "JSON API for Spotify recently played tracks stored in PostgreSQL",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "spotify",
+    "postgresql",
+    "json",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  }
+}

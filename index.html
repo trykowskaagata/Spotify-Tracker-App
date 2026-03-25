@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #121212;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1DB954, #1ed760);
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header svg {
+      width: 40px;
+      height: 40px;
+      fill: #fff;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .header .subtitle {
+      font-size: 14px;
+      opacity: 0.85;
+      margin-left: auto;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      padding: 20px 32px;
+      background: #181818;
+      border-bottom: 1px solid #282828;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      background: #1DB954;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:hover { background: #1ed760; transform: scale(1.03); }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { background: #535353; cursor: not-allowed; transform: none; }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #535353;
+      color: #b3b3b3;
+    }
+
+    .btn-outline:hover { border-color: #fff; color: #fff; background: transparent; }
+
+    .status {
+      margin-left: auto;
+      font-size: 13px;
+      color: #b3b3b3;
+    }
+
+    .status.error { color: #f15e6c; }
+    .status.success { color: #1DB954; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 24px 32px;
+      max-width: 1400px;
+    }
+
+    .card {
+      background: #181818;
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #282828;
+    }
+
+    .card h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #fff;
+    }
+
+    .card-full { grid-column: 1 / -1; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .stat-box {
+      background: #282828;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-box .value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1DB954;
+    }
+
+    .stat-box .label {
+      font-size: 12px;
+      color: #b3b3b3;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .track-list {
+      list-style: none;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .track-list::-webkit-scrollbar { width: 8px; }
+    .track-list::-webkit-scrollbar-track { background: #181818; }
+    .track-list::-webkit-scrollbar-thumb { background: #535353; border-radius: 4px; }
+
+    .track-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+
+    .track-item:hover { background: #282828; }
+
+    .track-index {
+      font-size: 14px;
+      color: #b3b3b3;
+      width: 24px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .track-cover {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #282828;
+    }
+
+    .track-info { flex: 1; min-width: 0; }
+
+    .track-name {
+      font-size: 15px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-name a {
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .track-name a:hover { text-decoration: underline; color: #1DB954; }
+
+    .track-artist {
+      font-size: 13px;
+      color: #b3b3b3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-meta {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .track-duration {
+      font-size: 14px;
+      color: #b3b3b3;
+    }
+
+    .track-time {
+      font-size: 11px;
+      color: #535353;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+
+    .artist-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .artist-name {
+      width: 140px;
+      font-size: 13px;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+    }
+
+    .artist-bar-fill {
+      height: 28px;
+      background: linear-gradient(90deg, #1DB954, #1ed760);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding-left: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 30px;
+      transition: width 0.6s ease;
+    }
+
+    .genre-list { list-style: none; }
+
+    .genre-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #282828;
+    }
+
+    .genre-item:last-child { border-bottom: none; }
+
+    .genre-rank {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1DB954;
+      width: 28px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .genre-rank.gold { color: #FFD700; }
+    .genre-rank.silver { color: #C0C0C0; }
+    .genre-rank.bronze { color: #CD7F32; }
+
+    .genre-name {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    .genre-count {
+      font-size: 13px;
+      color: #b3b3b3;
+      flex-shrink: 0;
+    }
+
+    .genre-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: #282828;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .genre-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1DB954, #1ed760);
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #b3b3b3;
+    }
+
+    .empty-state p { margin-bottom: 16px; font-size: 15px; }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #535353;
+      border-top-color: #1DB954;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 800px) {
+      .dashboard { grid-template-columns: 1fr; padding: 16px; }
+      .stat-grid { grid-template-columns: 1fr; }
+      .header { padding: 16px; }
+      .controls { padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <svg viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+    <h1>Spotify Dashboard</h1>
+    <span class="subtitle" id="subtitle"></span>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="syncBtn" onclick="syncTracks()">Synchronizuj utwory</button>
+    <button class="btn btn-outline" id="refreshBtn" onclick="loadDashboard()">Odswiez</button>
+    <span class="status" id="status"></span>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+    <div class="card card-full">
+      <div class="stat-grid" id="statsGrid">
+        <div class="stat-box">
+          <div class="value" id="statTotal">-</div>
+          <div class="label">Utworow w bazie</div>
+        </div>
+        <div class="stat-box">
+          <div class="value" id="statAvgDuration">-</div>
+          <div class="label">Sredni czas</div>
+        </div>
+        <div class="stat-box">
+          <div class="value" id="statAvgPop">-</div>
+          <div class="label">Srednia popularnosc</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Top artyści</h2>
+      <div id="topArtists"></div>
+    </div>
+
+    <div class="card">
+      <h2>Twoje gatunki</h2>
+      <div id="topGenres"></div>
+    </div>
+
+    <div class="card">
+      <h2>Kiedy sluchasz muzyki</h2>
+      <div class="chart-container">
+        <canvas id="hourChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Popularnosc utworow</h2>
+      <div class="chart-container">
+        <canvas id="popularityChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Czas trwania utworow</h2>
+      <div class="chart-container">
+        <canvas id="durationChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card card-full">
+      <h2>Ostatnio sluchane</h2>
+      <ul class="track-list" id="trackList"></ul>
+    </div>
+  </div>
+
+  <script>
+    let hourChart = null;
+    let popularityChart = null;
+    let durationChart = null;
+
+    function setStatus(text, type = "") {
+      const el = document.getElementById("status");
+      el.textContent = text;
+      el.className = "status " + type;
+    }
+
+    function msToMin(ms) {
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      return `${min}:${sec.toString().padStart(2, "0")}`;
+    }
+
+    function timeAgo(dateStr) {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const min = Math.floor(diff / 60000);
+      if (min < 60) return `${min} min temu`;
+      const hrs = Math.floor(min / 60);
+      if (hrs < 24) return `${hrs}h temu`;
+      const days = Math.floor(hrs / 24);
+      return `${days}d temu`;
+    }
+
+    async function syncTracks() {
+      const btn = document.getElementById("syncBtn");
+      btn.disabled = true;
+      setStatus("Synchronizacja...");
+
+      try {
+        const res = await fetch("/sync/recently-played", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 50 })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || "Sync failed");
+
+        setStatus(`Zsynchronizowano ${data.savedCount} utworow`, "success");
+        await loadDashboard();
+      } catch (err) {
+        setStatus(err.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function loadDashboard() {
+      try {
+        const [tracksRes, statsRes] = await Promise.all([
+          fetch("/tracks/recent?limit=50"),
+          fetch("/tracks/stats?limit=200")
+        ]);
+
+        const tracks = await tracksRes.json();
+        const stats = await statsRes.json();
+
+        renderStats(stats);
+        renderTopArtists(stats.topArtists);
+        renderTopGenres(stats.topGenres);
+        renderHourChart(stats.listeningByHour);
+        renderTrackList(tracks.items);
+        renderPopularityChart(tracks.items);
+        renderDurationChart(tracks.items);
+
+        document.getElementById("subtitle").textContent =
+          `${tracks.count} utworow w bazie`;
+      } catch (err) {
+        setStatus("Blad ladowania: " + err.message, "error");
+      }
+    }
+
+    function renderStats(stats) {
+      document.getElementById("statTotal").textContent = stats.totalTracks;
+      document.getElementById("statAvgDuration").textContent = msToMin(stats.avgDurationMs);
+      document.getElementById("statAvgPop").textContent = stats.avgPopularity + "/100";
+    }
+
+    function renderTopArtists(artists) {
+      const container = document.getElementById("topArtists");
+      if (!artists.length) {
+        container.innerHTML = '<div class="empty-state"><p>Brak danych</p></div>';
+        return;
+      }
+
+      const max = artists[0].count;
+      container.innerHTML = artists.map(a => `
+        <div class="artist-bar">
+          <span class="artist-name">${a.name}</span>
+          <div class="artist-bar-fill" style="width: ${Math.max((a.count / max) * 100, 15)}%">
+            ${a.count}x
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderTopGenres(genres) {
+      const container = document.getElementById("topGenres");
+      if (!genres || !genres.length) {
+        container.innerHTML = '<div class="empty-state"><p>Brak danych o gatunkach</p></div>';
+        return;
+      }
+
+      const max = genres[0].count;
+      const rankClass = (i) => i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "";
+
+      container.innerHTML = `<ul class="genre-list">${genres.map((g, i) => `
+        <li class="genre-item">
+          <span class="genre-rank ${rankClass(i)}">${i + 1}</span>
+          <span class="genre-name">${g.name}</span>
+          <div class="genre-bar-bg"><div class="genre-bar-fill" style="width: ${(g.count / max) * 100}%"></div></div>
+          <span class="genre-count">${g.count}x</span>
+        </li>
+      `).join("")}</ul>`;
+    }
+
+    function renderHourChart(hours) {
+      const ctx = document.getElementById("hourChart").getContext("2d");
+
+      if (hourChart) hourChart.destroy();
+
+      hourChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: hours.map((_, i) => `${i}:00`),
+          datasets: [{
+            label: "Odtworzenia",
+            data: hours,
+            backgroundColor: "#1DB954",
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: "#b3b3b3", maxRotation: 0 }, grid: { display: false } },
+            y: { ticks: { color: "#b3b3b3", stepSize: 1 }, grid: { color: "#282828" } }
+          }
+        }
+      });
+    }
+
+    function renderPopularityChart(tracks) {
+      const ctx = document.getElementById("popularityChart").getContext("2d");
+      if (popularityChart) popularityChart.destroy();
+
+      const sorted = [...tracks].sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 15);
+
+      popularityChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: sorted.map(t => t.track_name.length > 20 ? t.track_name.slice(0, 20) + "..." : t.track_name),
+          datasets: [{
+            label: "Popularnosc",
+            data: sorted.map(t => t.popularity || 0),
+            backgroundColor: sorted.map(t => {
+              const p = t.popularity || 0;
+              if (p >= 70) return "#1DB954";
+              if (p >= 40) return "#f59b23";
+              return "#f15e6c";
+            }),
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { max: 100, ticks: { color: "#b3b3b3" }, grid: { color: "#282828" } },
+            y: { ticks: { color: "#b3b3b3", font: { size: 11 } }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderDurationChart(tracks) {
+      const ctx = document.getElementById("durationChart").getContext("2d");
+      if (durationChart) durationChart.destroy();
+
+      const buckets = { "< 2 min": 0, "2-3 min": 0, "3-4 min": 0, "4-5 min": 0, "5+ min": 0 };
+      for (const t of tracks) {
+        const min = (t.duration_ms || 0) / 60000;
+        if (min < 2) buckets["< 2 min"]++;
+        else if (min < 3) buckets["2-3 min"]++;
+        else if (min < 4) buckets["3-4 min"]++;
+        else if (min < 5) buckets["4-5 min"]++;
+        else buckets["5+ min"]++;
+      }
+
+      durationChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: Object.keys(buckets),
+          datasets: [{
+            data: Object.values(buckets),
+            backgroundColor: ["#f15e6c", "#f59b23", "#1DB954", "#1ed760", "#17a74a"],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "right", labels: { color: "#b3b3b3", padding: 12 } }
+          }
+        }
+      });
+    }
+
+    function renderTrackList(tracks) {
+      const list = document.getElementById("trackList");
+
+      if (!tracks.length) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <p>Brak utworow w bazie.</p>
+            <button class="btn" onclick="syncTracks()">Synchronizuj teraz</button>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = tracks.map((t, i) => {
+        const imgTag = t.artist_image_url
+          ? `<img class="track-cover" src="${t.artist_image_url}" alt="">`
+          : `<div class="track-cover"></div>`;
+
+        return `
+          <li class="track-item">
+            <span class="track-index">${i + 1}</span>
+            ${imgTag}
+            <div class="track-info">
+              <div class="track-name">
+                ${t.spotify_url ? `<a href="${t.spotify_url}" target="_blank">${t.track_name}</a>` : t.track_name}
+              </div>
+              <div class="track-artist">${(t.artist_names || []).join(", ")}</div>
+            </div>
+            <div class="track-meta">
+              <div class="track-duration">${msToMin(t.duration_ms || 0)}</div>
+              <div class="track-time">${timeAgo(t.played_at)}</div>
+            </div>
+          </li>`;
+      }).join("");
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>
