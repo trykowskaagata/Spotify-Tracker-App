@@ -135,6 +135,6 @@ Projekt pokazuje praktyczne wykorzystanie:
 ## Pomysły:
 
 - analiza rekomendacji (ML / clustering)
-- eksport danych do CSV / Parquet  
+- eksport danych do CSV  
 - system alertów (np. nowe top tracks)  
 - deployment (Docker + CI/CD)  
