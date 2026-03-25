@@ -132,6 +132,7 @@ Projekt wymaga pliku konfiguracyjnego `.env` (przechowywanego lokalnie), który 
 * `DATABASE_URL`
 
 Z projektu usunięto integrację z *Audio Features* (BPM, Energy itp.), ponieważ Spotify wycofało wsparcie dla tych punktów końcowych (API deprecation). Pipeline skupia się obecnie na stabilnym gromadzeniu historii odtworzeń i metadanych artystów.
+
 ---
 Projekt pokazuje praktyczne wykorzystanie:
 
