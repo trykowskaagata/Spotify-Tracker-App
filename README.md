@@ -122,6 +122,17 @@ Wizualizacja danych w przeglądarce przy użyciu **Chart.js**:
 - **OAuth persistence:** automatyczne odnawianie tokenów (bez re-logowania)
 
 ---
+## Bezpieczeństwo i Konfiguracja
+
+Projekt wymaga pliku konfiguracyjnego `.env` (przechowywanego lokalnie), który zawiera poświadczenia do Spotify API oraz dane dostępowe do bazy PostgreSQL. 
+
+**Plik ten został celowo wykluczony z repozytorium (gitignored)** ze względów bezpieczeństwa. Aby uruchomić projekt, należy stworzyć własny plik `.env` z następującymi zmiennymi:
+* `SPOTIFY_CLIENT_ID`
+* `SPOTIFY_CLIENT_SECRET`
+* `DATABASE_URL`
+
+Z projektu usunięto integrację z *Audio Features* (BPM, Energy itp.), ponieważ Spotify wycofało wsparcie dla tych punktów końcowych (API deprecation). Pipeline skupia się obecnie na stabilnym gromadzeniu historii odtworzeń i metadanych artystów.
+---
 Projekt pokazuje praktyczne wykorzystanie:
 
 - projektowania pipeline’ów danych  
