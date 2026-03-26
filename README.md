@@ -105,7 +105,8 @@ Projekt pokazuje praktyczne wykorzystanie:
 
 ## Pomysły:
 
-- analiza rekomendacji (ML / clustering)
-- eksport danych do CSV  
-- system alertów (np. nowe top tracks)  
+- analiza rekomendacji (ML / clustering),
+- analiza czasu słuchania i dodatnie wykresów statystycznych,
+- połączenie bazy danych z ogólnodostępną bazą danych dt. parametrów muzycznych np. BPM, danceability, 
+- system alertów (np. nowe top tracks),  
 - deployment (Docker + CI/CD)  
